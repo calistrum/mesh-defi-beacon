@@ -11,8 +11,7 @@ import {PlutusData,PlutusList,ConstrPlutusData,
     addrBech32ToPlutusDataHex, 
     scriptHashToBech32,
     CardanoSDKUtil,
-    Address,
-    buildBaseAddress,
+    Address, BaseAddress, CredentialType, Hash28ByteBase16
 } from '@meshsdk/core-cst';
 
 import crypto from 'crypto';
@@ -390,21 +389,29 @@ function createSpotDatum(nfts, paymentAddress, deposit, price) {
  * @returns {string} - The generated smart contract address (Bech32 format)
  */
 function genSellerAddress(networkName, rewardAddress) {
-    const scriptHash = getScriptHash('AFTERMARKET'); // Get the AFTERMARKET script hash
+  const scriptHash = getScriptHash('AFTERMARKET'); // Get the AFTERMARKET script hash
 
-    // Convert network to networkId (0 for testnet, 1 for mainnet)
-    const networkId = networkName.toLowerCase() === 'testnet' ? 0 : 1;
-  
-    // Extract the staking key hash from the reward address
-    const stakingAddress = Address.fromBech32(rewardAddress);
-    const stakeKeyHash = stakingAddress.asReward().getPaymentCredential().hash;
-    // Create a Base Address with the script hash as the payment credential
-    //const paymentCredential = StakeCredential.from_scripthash(Buffer.from(scriptHash, 'hex'));
+  // Convert network to networkId (0 for testnet, 1 for mainnet)
+  const networkId = networkName.toLowerCase() === 'testnet' ? 0 : 1;
 
-    const baseAddress = buildBaseAddress(networkId, scriptHash,stakeKeyHash);
+  // Extract the staking key hash from the reward address
+  const stakingAddress = Address.fromBech32(rewardAddress);
+  const stakingCred = stakingAddress.asReward().getPaymentCredential();
+  // Create a Base Address with the script hash as the payment credential
+  //const paymentCredential = StakeCredential.from_scripthash(Buffer.from(scriptHash, 'hex'));
 
-    // Return the Bech32-encoded address
-    return baseAddress.toAddress().toBech32();
+  const paymentCredential= {
+    type: CredentialType.ScriptHash,
+    hash: Hash28ByteBase16(scriptHash),
+  };
+
+  let baseAddress = BaseAddress.fromCredentials(
+    networkId,
+    paymentCredential,
+    stakingCred
+  )
+
+  return baseAddress.toAddress().toBech32();
 }
 
 
