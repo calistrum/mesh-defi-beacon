@@ -22,10 +22,27 @@ export default function Home() {
   const detectWallet = async () => {
     if (!connected && window.cardano) {
       for (const walletName in window.cardano) {
-        const walletInstance : any = window.cardano[walletName];
+        const walletInstance: any = window.cardano[walletName];
         if (walletInstance.isEnabled && (await walletInstance.isEnabled())) {
-          await connect(walletName);
-          break;
+          try {
+            const api = await walletInstance.enable();
+            let networkId = null;
+            if (api.getNetworkId) {
+              networkId = await api.getNetworkId();
+            }
+            console.log(
+              `Detected wallet: ${walletName}, networkId: ${networkId !== null ? networkId : "unknown"}`
+            );
+            // Only connect if preprod/testnet
+            if (networkId === 0) {
+              await connect(walletName);
+              break;
+            }
+          } catch (e) {
+            console.log(`Error enabling wallet ${walletName}:`, e);
+          }
+        } else {
+          console.log(`Wallet ${walletName} is not enabled or does not support isEnabled.`);
         }
       }
     }
